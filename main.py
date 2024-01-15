@@ -12,7 +12,6 @@ import re
 import threading
 import time
 from tkinter import messagebox
-from twilio.rest import Client
 import soundtriggerbox_vosk
 from trigger_word_training import *
 
@@ -28,25 +27,9 @@ class Controller:
         self.trained_sounds = set()
 
     def if_logged_in(self):
-        # Check if 'twilio_account_details.json' exists
-        if os.path.exists('twilio_account_details.json'):
-            with open('twilio_account_details.json', 'r') as file:
-                data = json.load(file)
 
-                # Check if all necessary keys exist, and they are not empty
-                if all(key in data and data[key] for key in
-                       ['account_sid', 'auth_token', 'twilio_number', 'my_phone_number']):
-
-                    # If Twilio details are present, validate them
-                    if self.verify_twilio_credentials(data['account_sid'], data['auth_token']) and \
-                            self.validate_phone_number(data['twilio_number']) and \
-                            self.validate_phone_number(data['my_phone_number']):
-                        self.switch_to_interface('main')
-                        self.update_button_state()
-                        return
-
-        # If not, start from the Twilio details interface
-        self.switch_to_interface('twilio')
+        self.switch_to_interface('main')
+        self.update_button_state()
 
     def update_button_state(self):
         # Initialize flag
@@ -65,46 +48,6 @@ class Controller:
             self.my_application.start_soundtriggerbox_vosk_button.config(state=tk.NORMAL)
         else:
             self.my_application.start_soundtriggerbox_vosk_button.config(state=tk.DISABLED)
-
-    def save_details(self):
-        account_sid = self.my_application.account_sid_entry.get().strip()
-        auth_token = self.my_application.auth_token_entry.get().strip()
-        twilio_number = self.my_application.twilio_number_entry.get().strip()
-        my_phone_number = self.my_application.my_phone_number_entry.get().strip()
-
-        if self.verify_twilio_credentials(account_sid, auth_token) and self.validate_phone_number(
-                twilio_number) and self.validate_phone_number(my_phone_number):
-            self.save_twilio_account_details(account_sid, auth_token, twilio_number, my_phone_number)
-            self.root.after(1000, lambda: messagebox.showinfo("Info", "Logged in."))
-            self.switch_to_interface('main')
-        else:
-            self.my_application.error_label['text'] = "Invalid Twilio credentials or phone numbers. Please try again."
-
-    @staticmethod
-    def verify_twilio_credentials(account_sid, auth_token):
-        try:
-            client = Client(account_sid, auth_token)
-            client.api.accounts(account_sid).fetch()
-            return True
-        except Exception as e:
-            print("Error validating Twilio credentials:", str(e))
-            return False
-
-    @staticmethod
-    def validate_phone_number(phone_number):
-        phone_pattern = re.compile(r'^\+\d{1,15}$')
-        return phone_pattern.match(phone_number)
-
-    @staticmethod
-    def save_twilio_account_details(account_sid, auth_token, twilio_number, my_phone_number):
-        twilio_details = {
-            "account_sid": account_sid,
-            "auth_token": auth_token,
-            "twilio_number": twilio_number,
-            "my_phone_number": my_phone_number
-        }
-
-        save_json(twilio_details, 'twilio_account_details.json')
 
     def start_training_sound(self, sound_name, number, sys_mode):
         print(self.trained_sounds)
@@ -201,10 +144,7 @@ class Controller:
         self.switch_to_interface("train")
 
     def switch_to_interface(self, interface_name):
-        if interface_name == "twilio":
-            self.my_application.clear_interface()
-            self.my_application.initialize_twilio_details_interface()
-        elif interface_name == "train":
+        if interface_name == "train":
             self.my_application.clear_interface()
             self.my_application.initialize_train_default_sounds_interface()
         else:
@@ -218,15 +158,11 @@ class MyApplication:
         self.status_label = None
         self.root = root
         self.controller = controller
-        self.initialize_twilio_details_interface()
         self.root.config(bg="#fafafa")
         self.root.title("Sound Trigger Box")  # Add title to the window
 
     def initialize_interface(self):
         self.create_main_interface()
-
-    def initialize_twilio_details_interface(self):
-        self.create_twilio_details_interface()
 
     def initialize_train_default_sounds_interface(self):
         self.create_train_default_sounds_interface()
@@ -237,47 +173,6 @@ class MyApplication:
     def clear_interface(self):
         for widget in self.root.winfo_children():
             widget.destroy()
-
-    def create_twilio_details_interface(self):
-        frame = tk.Frame(self.root)
-        frame.pack(fill=tk.BOTH, expand=True)
-
-        frame.grid_rowconfigure(0, weight=1)  # Allow row to expand
-        frame.grid_rowconfigure(1, weight=1)  # Allow row to expand
-        frame.grid_columnconfigure(0, weight=1)  # Allow column to expand
-        frame.grid_columnconfigure(1, weight=1)  # Allow column to expand
-
-        self.title_label = tk.Label(frame, text="Sound Trigger Box\nYour Emergency Triggering Voice Assistant",
-                                    font=("Arial", 24), bg="#fafafa")
-        self.title_label.grid(row=0, column=0, sticky="ew")
-
-        self.account_sid_label = tk.Label(frame, text="Account SID:", font=("Arial", 20))
-        self.account_sid_label.grid(row=1, column=0, sticky="ew")
-        self.account_sid_entry = tk.Entry(frame)
-        self.account_sid_entry.grid(row=1, column=1, sticky="ew")
-
-        self.auth_token_label = tk.Label(frame, text="Auth Token:", font=("Arial", 20))
-        self.auth_token_label.grid(row=2, column=0, sticky="ew")
-        self.auth_token_entry = tk.Entry(frame)
-        self.auth_token_entry.grid(row=2, column=1, sticky="ew")
-
-        self.twilio_number_label = tk.Label(frame, text="Twilio Phone Number:", font=("Arial", 20))
-        self.twilio_number_label.grid(row=3, column=0, sticky="ew")
-        self.twilio_number_entry = tk.Entry(frame)
-        self.twilio_number_entry.grid(row=3, column=1, sticky="ew")
-
-        self.my_phone_number_label = tk.Label(frame, text="Your Phone Number:", font=("Arial", 20))
-        self.my_phone_number_label.grid(row=4, column=0, sticky="ew")
-        self.my_phone_number_entry = tk.Entry(frame)
-        self.my_phone_number_entry.grid(row=4, column=1, sticky="ew")
-
-        self.error_label = tk.Label(frame, text="", fg="red")
-        self.error_label.grid(row=5, column=0, columnspan=2, sticky="ew")
-
-        self.save_button = tk.Button(frame, text="Save Details", command=self.controller.save_details, font=("Arial", 20))
-        self.save_button.grid(row=6, column=0, columnspan=2, sticky="ew")
-
-        return frame
 
     def create_main_interface(self):
         frame = tk.Frame(self.root, bg="#fafafa")
