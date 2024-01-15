@@ -1,6 +1,4 @@
 # soundtrigger.py
-
-from twilio.rest import Client
 from config import *
 
 
@@ -15,24 +13,9 @@ def SoundDetection(text):
     else:
         return 0
 
-
-# This code is adapted from https://www.twilio.com/docs/libraries/python
 def SoundTriggering(signal):
     if signal == 1:
-        twilio_details = load_json('twilio_account_details.json')
-        account_sid = twilio_details['account_sid']
-        auth_token = twilio_details['auth_token']
-        twilio_number = twilio_details['twilio_number']
-        my_phone_number = twilio_details['my_phone_number']
-
-        client = Client(account_sid, auth_token)
-
-        message = client.messages.create(
-            body="I need help!",
-            from_=twilio_number,
-            to=my_phone_number
-        )
-        print(message)
+        print("Trigger sent to the message queue")
     else:
         return
     return

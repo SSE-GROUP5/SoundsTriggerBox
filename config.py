@@ -19,15 +19,6 @@ def load_json(name):
             }
             save_json(default_config, 'config.json')
             return default_config
-        elif name == 'twilio_account_details.json':
-            default_twilio_details = {
-                "account_sid": "",
-                "auth_token": "",
-                "twilio_number": "",
-                "my_phone_number": ""
-            }
-            save_json(default_twilio_details, 'twilio_account_details.json')
-            return default_twilio_details
         else:
             raise FileNotFoundError(f"No such file or directory: '{name}'")
 
